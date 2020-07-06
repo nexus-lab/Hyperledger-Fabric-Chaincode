@@ -5,33 +5,18 @@ import (
 "github.com/hyperledger/fabric/core/peer"
 "encoding/json"
 "io/ioutil"
+"encoding/csv"
 )
-
-type TweetChaincode struct {
+//create structure for the chaincode
+type LetterChaincode struct {
 
 }
-
-type Tweet struct{
-
-	Created_at Time `json:"created_at"`
-	Id int64 'json:"id"'
-	Id_str string 'json:"id_str"'
-	Text string `json:"text"`
-	Source string 'json:"source"'
-	Truncated bool 'json:"truncated"'
-	In_reply_to_status_id int64 'json"in_reply_to_status_id"'
-	In_reply_to_status_id_str string 'json"in_reply_to_status_id_str"'
-	In_reply_to_user_id int64 'json:"in_reply_to_user_id"'
-	In_reply_to_user_id_str string 'json:"in_reply_to_user_id_str"'
-	In_reply_to_screen_name string 'json:"in_reply_to_screen_name"'
-	User *User 'json:"User, omitempty'
-	Place string `json:"place"`
-	Coordinates string `json:"coordinates"`
+//structure for individual lines of CSV file
+type CsvLine struct{
+	Column1 string
+	Column2 string
 }
-User type User struct{
-	Username string 'json:"username"'
-	Userid string 'json:"userid"'
-	Userlocation string `json:"userlocation"`
+//metadata to query for the output file
 }
 type CompositeFile struct{
 	Filename string 'json:"filename"'
@@ -40,13 +25,14 @@ type CompositeFile struct{
 
 //initialize the chaincode
 //only call when the chaincode is instantiated
-func (t *TweetChaincode) Init(stub shim.ChaincodeStubInterface) peer.Response {
+func (t *LetterChaincode) Init(stub shim.ChaincodeStubInterface) peer.Response {
 	fmt.Println("##### Init Chaincode #####")
 	//get args from transaction proposal
 	args := stub.GetStringArgs()
 
 	filesSlice := []
 
+	//should only have 1 argument, throws error otherwise
 	if len(args) != 1 {
 
 		return shim.Error("Incorrect arguments. Expecting output file name.")
@@ -55,23 +41,23 @@ func (t *TweetChaincode) Init(stub shim.ChaincodeStubInterface) peer.Response {
 	//Store the outfile in the ledger
 
 	err := stub.PutState(args[0]))
-
+	//tries to commit current state of output file
 	if err != nil {
 		return shim.Error(ftm.Sprintf("Failed to create asset: %s", args[0]))
 	}
 	return shim.Success(nil)
 }
 
-func (t *TweetChaincode) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
+//invoke function is the basis of chaincode calls, call an argument
+func (t *LetterChaincode) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 	fmt.println("##### Invoke Chaincode #####")
 	//extract function and args from transaction proposal
-
 	fn, args := stub.GetFunctionAndParameters()
 
 	var result string
 
 	var err error
-
+	//checks if the called function is filter
 	if fn  == "filter"{
 
 		result, err = filter(stub, args)
@@ -91,16 +77,20 @@ if err != nil {
 return shim.Success([]byte(result))
 }
 
+//function for filtering the data as prescribed for the smart contract logic
 func filter(stub shim.ChaincodeStubInterface, args []string)(string, error) {
-
+	//throw error if not two argumets, input and output files
 	if len(args) != 2 {
 		return "", fmt.Errorf("Incorrect arguments. Expecting an input and output file name")
 
 	}
+	//set file names
 	string(inputName) := args[1]
 	string(outputName) := args[0]
+	//adds the input name to the slice for querying later
 	filesSlice.append(inputName)
 
+	//commits current slice to chaincode
 	err := stub.PutState(args[0], filesSlice)
 
 	if err != nil{
@@ -109,35 +99,87 @@ func filter(stub shim.ChaincodeStubInterface, args []string)(string, error) {
 
 	}
 	
-	jsonFile, err := os.Open(inputName)
+	//open input csv file
+	lines, err := ReadCsv(inputName)
+	if err != nil{
+		panic(err)
+	}
 
-	byteValue, _ := ioutill.ReadAll(jsonFile)
-	var tweets Tweet 
-	json.Unmarshal(byteValue, &tweets)
-	for i := 0; i < len(tweets.Tweet); i++{
-		if tweets.Tweet[13] != null{
-			
-			writeLine(tweets.Tweet, outFile)
+	//loop through lines and turn into object
+	for _, line := range lines{
+		data := CsvLine{
+			Column1: line[0],
+			Column2: line[1],
+		}	
+	}
 
+	//reads CSV
+	func ReadCsv(filename string) ([][]string, error){
+
+		//open csv file
+		f, err := os.Open(inputFile)
+		if err != nil{
+			return [][]string{}, err
 		}
+		defer f.Close()
 
+		//read files into a variable
+		lines, err := csv.NewReader(f).ReadAll()
+		if err != nil {
+			return [][]string {}, err
+		}
+		return lines, nil
 	}
 	if err != nil{
 
 		fmt.Println(err)
 	}
-	defer jsonFile.Close()
+	//parses the values of the input file
 	return args[1], nil
+	func parseLetters(file string) (map[string]*Point, error) {
+		f, err := os.Open(file)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+	
+		csvr := csv.NewReader(f)
+		//maps the values of the CSV to the column name
+		letters := map[string]*Point{}
+		for {
+			row, err := csvr.Read()
+			if err != nil {
+				if err == io.EOF {
+					err = nil
+				}
+				return letters, err
+				// writeLines writes the lines to the given file.
+					func writeLine(line string, path string) error {
+						file, err := os.Create(path)
+						if err != nil {
+	 				 	return err
+						}
+				for i in len(letters)
+						if letters[i][1] := 'yes'{
+							writeLine(letters[i], outfile)
+						}
+			}
+	
+		}
+	}
 
 }
 
+//query previous commits made to the chaincode
 func query(stub shim.ChaincodeStubInterface, args []string)(string, error) {
-
+	//only taking in one argument, output file name
 	if len(args) != 1 {
 
 		return "", ftm.Errorf("Incorrect arguments. Expecting an output file name")
 
 	}
+
+	//returns error if this file has not been committed to the chaincode before
 	value, err := stub.GetState(args[0])
 	
 		if err != nil{
@@ -153,6 +195,7 @@ func query(stub shim.ChaincodeStubInterface, args []string)(string, error) {
 
 }
 
+//starts the chaincode
 func main(){
 
 	err := shim.Start(new(SampleChaincode))
@@ -165,10 +208,3 @@ func main(){
 		fmt.Println("TweetChaincode successfully started.")
 	}
 }
-// writeLines writes the lines to the given file.
-func writeLine(line string, path string) error {
-	file, err := os.Create(path)
-	if err != nil {
-	  return err
-	}
-  
