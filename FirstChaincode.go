@@ -14,7 +14,6 @@ import (
 )
 
 // SimpleAsset implements a simple chaincode to manage an asset
-//	Don't touch this
 type SimpleAsset struct {
 
 }
@@ -78,11 +77,10 @@ func (t *SimpleAsset) Init(stub shim.ChaincodeStubInterface) peer.Response {
 	fmt.Println("Init")
 	_, args := stub.GetFunctionAndParameters()
 	var InitURL string
-	var KeyA string
 	var err error
 
-	if len(args) != 2 {
-		return shim.Error("Incorrect number of arguments. Expecting 2")
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting a data URL.")
 	}
 
 	KeyA = args[0]
@@ -94,7 +92,7 @@ func (t *SimpleAsset) Init(stub shim.ChaincodeStubInterface) peer.Response {
 	fmt.Printf("Successfully accessed: ", InitURL)
 
 	// Write the state to the ledger
-	err = stub.PutState(KeyA, []byte(InitURL))
+	err = stub.PutState([]byte(InitURL))
 	if err != nil {
 		return shim.Error(err.Error())
 	}
